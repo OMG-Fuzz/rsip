@@ -25,7 +25,7 @@ md-5 = "0.9.1"
 sha2 = "0.9.5"
 testing-utils = { version = "0.1.1", optional = true }
 bstr = "0.2.17"
-aglaea = { git = "ssh://git@github.com/qrzbing/OMG.git", branch = "dev", features = ["derive"] }
+aglaea = { git = "ssh://git@github.com/OMG-Fuzz/aglaea.git", branch = "dev", features = ["derive"] }
 
 
 [features]

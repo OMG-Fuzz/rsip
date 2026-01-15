@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "aglaea"
 version = "0.2.5"
-source = "git+ssh://git@github.com/qrzbing/OMG.git?branch=dev#42f69b9b1bfb52dead651e12bc67cd83b9ab9797"
+source = "git+ssh://git@github.com/OMG-Fuzz/aglaea.git?branch=dev#6f7b2224ea65cef42bc9ec06554fa3f1adb7f066"
 dependencies = [
  "aglaea_derive",
  "log",
@@ -17,7 +17,7 @@ dependencies = [
 [[package]]
 name = "aglaea_derive"
 version = "0.2.5"
-source = "git+ssh://git@github.com/qrzbing/OMG.git?branch=dev#42f69b9b1bfb52dead651e12bc67cd83b9ab9797"
+source = "git+ssh://git@github.com/OMG-Fuzz/aglaea.git?branch=dev#6f7b2224ea65cef42bc9ec06554fa3f1adb7f066"
 dependencies = [
  "env_logger",
  "log",
