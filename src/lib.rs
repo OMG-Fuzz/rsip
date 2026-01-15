@@ -264,6 +264,10 @@ mod error;
 pub mod headers;
 pub mod message;
 pub mod services;
+pub mod wrapper;
+
+#[cfg(test)]
+pub mod weave;
 
 pub use error::{Error, TokenizerError};
 

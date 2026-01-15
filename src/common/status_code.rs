@@ -9,7 +9,7 @@ macro_rules! create_status_codes {
         /// RFC refers to them). This is not a `Copy` type because in case of an unknown (= not
         /// defined in any SIP RFC) status code, the reason is also provided inside the `Other`
         /// tuple variant.
-        #[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Clone)]
+        #[derive(Debug, PartialEq, Eq, Ord, PartialOrd, Clone, aglaea::PangLabel)]
         pub enum StatusCode {
             $(
                 $name,
@@ -245,5 +245,34 @@ mod tokenizer {
 
             Ok((rem, (code, reason).into()))
         }
+    }
+}
+
+// Aglaea implementations for StatusCode
+impl aglaea::ToGrammar for StatusCode {
+    fn grammar_with_context(_visited: &mut std::collections::HashSet<String>) -> aglaea::Grammar {
+        use aglaea::{exp, t_bytes_val, PangLabel};
+        let mut rules = aglaea::Grammar::new();
+
+        // StatusCode -> 3-digit code + " " + reason phrase
+        // For simplicity, we allow any 3 digits followed by space and reason
+        rules.insert(
+            Self::label(),
+            vec![exp(vec![t_bytes_val(&[])])], // Placeholder for status code
+        );
+
+        rules
+    }
+}
+
+impl aglaea::ToTree for StatusCode {
+    fn to_tree(&self) -> std::sync::Arc<aglaea::DerivationTree> {
+        use aglaea::{new_node, ntc, t_bytes_val, PangLabel};
+
+        let status_bytes = self.to_string().into_bytes();
+        new_node(ntc(
+            &Self::label(),
+            Some(vec![new_node(t_bytes_val(&status_bytes))]),
+        ))
     }
 }

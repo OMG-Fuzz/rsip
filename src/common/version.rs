@@ -5,7 +5,7 @@ pub use tokenizer::Tokenizer;
 use std::convert::{TryFrom, TryInto};
 
 /// Simple enum that holds the SIP version. Defaults to `Version::V2`.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, aglaea::PangLabel)]
 pub enum Version {
     V1,
     V2,
@@ -106,6 +106,37 @@ mod tokenizer {
 
             Ok((rem, (major, minor).into()))
         }
+    }
+}
+
+// Aglaea implementations for Version
+impl aglaea::ToGrammar for Version {
+    fn grammar_with_context(_visited: &mut std::collections::HashSet<String>) -> aglaea::Grammar {
+        use aglaea::{exp, t_bytes_val, PangLabel};
+        let mut rules = aglaea::Grammar::new();
+
+        // SIP versions
+        rules.insert(
+            Self::label(),
+            vec![
+                exp(vec![t_bytes_val(b"SIP/1.0")]),
+                exp(vec![t_bytes_val(b"SIP/2.0")]),
+            ],
+        );
+
+        rules
+    }
+}
+
+impl aglaea::ToTree for Version {
+    fn to_tree(&self) -> std::sync::Arc<aglaea::DerivationTree> {
+        use aglaea::{new_node, ntc, t_bytes_val, PangLabel};
+
+        let version_bytes = self.to_string().into_bytes();
+        new_node(ntc(
+            &Self::label(),
+            Some(vec![new_node(t_bytes_val(&version_bytes))]),
+        ))
     }
 }
 

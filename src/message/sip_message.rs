@@ -19,7 +19,7 @@ use std::convert::{TryFrom, TryInto};
 /// [HeadersExt](crate::message::HeadersExt) trait that is automatically implemented for any type
 /// that has implemented the [HasHeaders](crate::message::HasHeaders) trait, which SipMessage
 /// implements it.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, aglaea::PangLabel, aglaea::ToGrammar, aglaea::ToTree)]
 pub enum SipMessage {
     Request(Request),
     Response(Response),

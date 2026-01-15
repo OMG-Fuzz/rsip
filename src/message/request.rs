@@ -24,12 +24,15 @@ use std::convert::{TryFrom, TryInto};
 /// [HeadersExt](crate::message::HeadersExt) trait that is automatically implemented for any type
 /// that has implemented the [HasHeaders](crate::message::HasHeaders) trait, which Request
 /// implements it.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, aglaea::PangLabel)]
 pub struct Request {
     pub method: Method,
+    #[weave(inner = "crate::wrapper::UriWrapper")]
     pub uri: Uri,
     pub version: Version,
+    #[weave(inner = "crate::wrapper::HeadersWrapper")]
     pub headers: Headers,
+    #[weave(inner = "crate::wrapper::BodyWrapper")]
     pub body: Vec<u8>,
 }
 
@@ -62,6 +65,67 @@ impl super::HasHeaders for Request {
 
     fn headers_mut(&mut self) -> &mut Headers {
         &mut self.headers
+    }
+}
+
+// Manual ToTree implementation to ensure proper spacing
+impl aglaea::ToTree for Request {
+    fn to_tree(&self) -> std::sync::Arc<aglaea::DerivationTree> {
+        use aglaea::{new_node, ntc, t_bytes_val, PangLabel, ToTreeAs};
+        use crate::wrapper::{UriWrapper, HeadersWrapper, BodyWrapper};
+
+        // Format: METHOD SP URI SP VERSION CRLF HEADERS CRLF BODY
+        let children = vec![
+            self.method.to_tree(),
+            new_node(t_bytes_val(b" ")),  // Space after method
+            ToTreeAs::<UriWrapper>::to_tree_as(&self.uri),  // Uses UriWrapper
+            new_node(t_bytes_val(b" ")),  // Space after URI
+            self.version.to_tree(),
+            new_node(t_bytes_val(b"\r\n")),  // CRLF after status line
+            ToTreeAs::<HeadersWrapper>::to_tree_as(&self.headers),  // Uses HeadersWrapper (includes trailing CRLF)
+            ToTreeAs::<BodyWrapper>::to_tree_as(&self.body),  // Uses BodyWrapper
+        ];
+
+        new_node(ntc(&Self::label(), Some(children)))
+    }
+}
+
+// Manual ToGrammar implementation to match ToTree spacing
+impl aglaea::ToGrammar for Request {
+    fn grammar_with_context(visited: &mut std::collections::HashSet<String>) -> aglaea::Grammar {
+        use aglaea::{exp, nt, t_bytes_val, PangLabel};
+        use crate::wrapper::{UriWrapper, HeadersWrapper, BodyWrapper};
+
+        let mut rules = aglaea::Grammar::new();
+
+        // Add dependencies
+        rules.extend(Method::grammar_with_context(visited));
+        rules.extend(UriWrapper::grammar_with_context(visited));
+        rules.extend(Version::grammar_with_context(visited));
+        rules.extend(HeadersWrapper::grammar_with_context(visited));
+        rules.extend(BodyWrapper::grammar_with_context(visited));
+
+        let my_label = Self::label().to_string();
+        if !visited.insert(my_label.clone()) {
+            return rules;
+        }
+
+        // Request -> Method SP UriWrapper SP Version CRLF HeadersWrapper BodyWrapper
+        rules.insert(
+            Self::label(),
+            vec![exp(vec![
+                nt(&Method::label()),
+                t_bytes_val(b" "),
+                nt(&UriWrapper::label()),
+                t_bytes_val(b" "),
+                nt(&Version::label()),
+                t_bytes_val(b"\r\n"),
+                nt(&HeadersWrapper::label()),
+                nt(&BodyWrapper::label()),
+            ])],
+        );
+
+        rules
     }
 }
 

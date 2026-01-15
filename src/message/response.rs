@@ -23,11 +23,15 @@ use std::convert::{TryFrom, TryInto};
 /// [HeadersExt](crate::message::HeadersExt) trait that is automatically implemented for any type
 /// that has implemented the [HasHeaders](crate::message::HasHeaders) trait, which Response
 /// implements it.
-#[derive(Debug, PartialEq, Eq, Clone, Default)]
+#[derive(
+    Debug, PartialEq, Eq, Clone, Default, aglaea::PangLabel,
+)]
 pub struct Response {
     pub status_code: StatusCode,
     pub version: Version,
+    #[weave(inner = "crate::wrapper::HeadersWrapper")]
     pub headers: Headers,
+    #[weave(inner = "crate::wrapper::BodyWrapper")]
     pub body: Vec<u8>,
 }
 
@@ -56,6 +60,62 @@ impl super::HasHeaders for Response {
 
     fn headers_mut(&mut self) -> &mut Headers {
         &mut self.headers
+    }
+}
+
+// Manual ToTree implementation to ensure proper spacing
+impl aglaea::ToTree for Response {
+    fn to_tree(&self) -> std::sync::Arc<aglaea::DerivationTree> {
+        use aglaea::{new_node, ntc, t_bytes_val, PangLabel, ToTreeAs};
+        use crate::wrapper::{HeadersWrapper, BodyWrapper};
+
+        // Format: VERSION SP STATUS_CODE CRLF HEADERS CRLF BODY
+        let children = vec![
+            self.version.to_tree(),
+            new_node(t_bytes_val(b" ")),  // Space after version
+            self.status_code.to_tree(),
+            new_node(t_bytes_val(b"\r\n")),  // CRLF after status line
+            ToTreeAs::<HeadersWrapper>::to_tree_as(&self.headers),  // Uses HeadersWrapper (includes trailing CRLF)
+            ToTreeAs::<BodyWrapper>::to_tree_as(&self.body),  // Uses BodyWrapper
+        ];
+
+        new_node(ntc(&Self::label(), Some(children)))
+    }
+}
+
+// Manual ToGrammar implementation to match ToTree spacing
+impl aglaea::ToGrammar for Response {
+    fn grammar_with_context(visited: &mut std::collections::HashSet<String>) -> aglaea::Grammar {
+        use aglaea::{exp, nt, t_bytes_val, PangLabel};
+        use crate::wrapper::{HeadersWrapper, BodyWrapper};
+
+        let mut rules = aglaea::Grammar::new();
+
+        // Add dependencies
+        rules.extend(Version::grammar_with_context(visited));
+        rules.extend(StatusCode::grammar_with_context(visited));
+        rules.extend(HeadersWrapper::grammar_with_context(visited));
+        rules.extend(BodyWrapper::grammar_with_context(visited));
+
+        let my_label = Self::label().to_string();
+        if !visited.insert(my_label.clone()) {
+            return rules;
+        }
+
+        // Response -> Version SP StatusCode CRLF HeadersWrapper BodyWrapper
+        rules.insert(
+            Self::label(),
+            vec![exp(vec![
+                nt(&Version::label()),
+                t_bytes_val(b" "),
+                nt(&StatusCode::label()),
+                t_bytes_val(b"\r\n"),
+                nt(&HeadersWrapper::label()),
+                nt(&BodyWrapper::label()),
+            ])],
+        );
+
+        rules
     }
 }
 
